@@ -1,168 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daniel's Finances</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        * { box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #0f172a;
-            color: #f8fafc;
-            margin: 0;
-            padding: 20px;
-        }
-        .header-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #334155;
-        }
-        h1 { margin: 0; font-size: 24px; color: #38bdf8; }
-        
-        /* 75% / 25% Grid Layout */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 3fr 1fr;
-            gap: 20px;
-        }
-        @media (max-width: 768px) {
-            .dashboard-grid { grid-template-columns: 1fr; }
-        }
-
-        .card {
-            background-color: #1e293b;
-            border-radius: 16px;
-            padding: 20px;
-            border: 1px solid #334155;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-        }
-        h2 { font-size: 18px; color: #94a3b8; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 8px;}
-        .big-balance { font-size: 36px; font-weight: bold; color: #ffffff; margin-bottom: 15px; }
-        
-        /* Tables */
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #334155; }
-        th { color: #64748b; font-size: 13px; text-transform: uppercase; }
-        td { font-size: 15px; }
-        .stock-ticker { font-weight: bold; color: #38bdf8; }
-        
-        /* Buttons & Forms */
-        button {
-            background-color: #0284c7;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-        button:hover { background-color: #0369a1; }
-        .btn-admin { background-color: #475569; font-size: 12px; }
-        
-        .admin-panel {
-            background-color: #334155;
-            margin-top: 20px;
-            padding: 20px;
-            border-radius: 12px;
-            display: none; /* Hidden by default */
-        }
-        .form-group { margin-bottom: 12px; }
-        label { display: block; font-size: 13px; color: #cbd5e1; margin-bottom: 5px; }
-        input {
-            width: 100%;
-            padding: 8px;
-            background-color: #1e293b;
-            border: 1px solid #475569;
-            border-radius: 6px;
-            color: white;
-        }
-        .chart-container { margin-top: 25px; height: 250px; }
-    </style>
-</head>
-<body>
-
-    <div class="header-bar">
-        <h1>🚀 Daniel's Financial Dashboard</h1>
-        <button class="btn-admin" onclick="checkPin()">⚙️ Admin Mode</button>
-    </div>
-
-    <div class="dashboard-grid">
-        <div class="card">
-            <h2>📈 Fidelity Custodial Investment Account (75%)</h2>
-            <div class="big-balance" id="total-investing-val">$0.00</div>
-            
-            <div><span style="color:#94a3b8">Fidelity Cash Core:</span> <strong id="investing-cash-val">$0.00</strong></div>
-            
-            <table>
-                <thead>
-                    <tr>
-                        <th>Company</th>
-                        <th>Shares</th>
-                        <th>Live Price</th>
-                        <th>Total Market Value</th>
-                    </tr>
-                </thead>
-                <tbody id="stock-table-body">
-                    </tbody>
-            </table>
-
-            <div class="chart-container">
-                <canvas id="trendChart"></canvas>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2>💰 Spending Money (25%)</h2>
-            <p style="color: #94a3b8; font-size: 13px; margin-top:0;">Pretend Cash Account</p>
-            <div class="big-balance" style="color: #4ade80;" id="spending-cash-val">$0.00</div>
-            <p style="font-size: 14px; color: #cbd5e1; line-height: 1.4;">This money is safely held out of the stock market for standard dynamic spending.</p>
-        </div>
-    </div>
-
-    <div id="admin-panel" class="admin-panel">
-        <h3 style="margin-top:0; color:#38bdf8;">Update Financial Records</h3>
-        
-        <div class="form-group">
-            <label>Pretend Spending Cash ($)</label>
-            <input type="number" id="input-spending-cash" step="0.01">
-        </div>
-        
-        <div class="form-group">
-            <label>Fidelity Investing Cash Core ($)</label>
-            <input type="number" id="input-investing-cash" step="0.01">
-        </div>
-        
-        <div style="border-top: 1px solid #475569; margin: 15px 0; padding-top:10px;">
-            <p style="font-size: 13px; font-weight:bold; margin:0 0 10px 0;">Manage Stock Holdings:</p>
-            <div class="form-group" style="display:inline-block; width:48%; margin-right:2%;">
-                <label>Stock Ticker 1 (e.g., RBLX)</label>
-                <input type="text" id="input-t1" placeholder="RBLX">
-            </div>
-            <div class="form-group" style="display:inline-block; width:48%;">
-                <label>Shares Count</label>
-                <input type="number" id="input-s1" step="0.01">
-            </div>
-            
-            <div class="form-group" style="display:inline-block; width:48%; margin-right:2%;">
-                <label>Stock Ticker 2 (e.g., MCD)</label>
-                <input type="text" id="input-t2" placeholder="MCD">
-            </div>
-            <div class="form-group" style="display:inline-block; width:48%;">
-                <label>Shares Count</label>
-                <input type="number" id="input-s2" step="0.01">
-            </div>
-        </div>
-
-        <button onclick="saveData()">Save Changes & Log History</button>
-        <button style="background-color:#ef4444;" onclick="clearHistory()">Reset Chart History</button>
-    </div>
-
-    <script>
+<script>
         // --- CONSTANTS AND STATE ---
         const PIN = "1979";
         // Free real-time public financial stock API token
@@ -177,17 +13,19 @@
                 { ticker: 'MCD', shares: 2 }
             ],
             history: [
-                { date: '2026-06-15', balance: 500 },
-                { date: '2026-06-16', balance: 550 }
+                { date: '2026-06-17', balance: 170.00 } // Clean historical starting baseline set here
             ]
         };
+
+        // Track live tracking value globally to feed the history graph accurately
+        let currentCalculatedTotal = 170.00;
 
         // --- LIVE STOCK DATA & RENDERING ---
         async function fetchStockPrice(ticker) {
             try {
                 let response = await fetch(`${API_URL}&symbol=${ticker.toUpperCase()}`);
                 let data = await response.json();
-                return data.c && data.c !== 0 ? data.c : 50.00; // Backup pricing placeholder if network cuts out
+                return data.c && data.c !== 0 ? data.c : 50.00; 
             } catch (e) {
                 return 50.00;
             }
@@ -219,8 +57,8 @@
                 `;
             }
 
-            let grandTotalInvesting = appData.investingCash + accumulatedStockValue;
-            document.getElementById('total-investing-val').innerText = `$${grandTotalInvesting.toFixed(2)}`;
+            currentCalculatedTotal = appData.investingCash + accumulatedStockValue;
+            document.getElementById('total-investing-val').innerText = `$${currentCalculatedTotal.toFixed(2)}`;
             
             renderChart();
         }
@@ -253,23 +91,28 @@
                 { ticker: document.getElementById('input-t2').value.toUpperCase(), shares: parseFloat(document.getElementById('input-s2').value) || 0 }
             ];
 
-            // Append performance checkpoint for trend chart
-            let today = new Date().toLocaleDateString();
-            let estimatedTotal = appData.investingCash + (appData.stocks[0].shares * 40) + (appData.stocks[1].shares * 280); // baseline placeholder
-            
-            // Limit logging duplicate updates for the same day
-            if(appData.history[appData.history.length - 1]?.date !== today) {
-                appData.history.push({ date: today, balance: estimatedTotal });
-            }
+            // Wait a split second to pull the exact live calculation total into history
+            setTimeout(() => {
+                let today = new Date().toLocaleDateString();
+                
+                // Overwrite last checkpoint if updating multiple times on the same calendar day
+                if(appData.history.length > 0 && appData.history[appData.history.length - 1].date === today) {
+                    appData.history[appData.history.length - 1].balance = currentCalculatedTotal;
+                } else {
+                    appData.history.push({ date: today, balance: currentCalculatedTotal });
+                }
 
-            localStorage.setItem('daniel_app_data', JSON.stringify(appData));
+                localStorage.setItem('daniel_app_data', JSON.stringify(appData));
+                updateDashboard();
+            }, 300);
+
             document.getElementById('admin-panel').style.display = "none";
-            updateDashboard();
         }
 
         function clearHistory() {
             if(confirm("Are you sure you want to wipe performance chart metrics history?")) {
-                appData.history = [];
+                // Returns to clean starting baseline structure
+                appData.history = [{ date: new Date().toLocaleDateString(), balance: currentCalculatedTotal }];
                 localStorage.setItem('daniel_app_data', JSON.stringify(appData));
                 updateDashboard();
             }
@@ -312,5 +155,3 @@
         // Initialize dashboard fields on load
         updateDashboard();
     </script>
-</body>
-</html>

@@ -108,7 +108,7 @@
                     </tr>
                 </thead>
                 <tbody id="stock-table-body">
-                    </tbody>
+                </tbody>
             </table>
 
             <div class="chart-container">
@@ -165,10 +165,11 @@
     <script>
         // --- CONSTANTS AND STATE ---
         const PIN = "1979";
-        // Free real-time public financial stock API token
         const API_URL = "https://finnhub.io/api/v1/quote?token=clvvkv1r01qio96m6o00clvvkv1r01qio96m6o0g";
 
-        // Load or initialize app settings data setup
+        // Global variable to keep track of current grand total for accurate logging
+        let currentGrandTotalInvesting = 0;
+
         let appData = JSON.parse(localStorage.getItem('daniel_app_data')) || {
             spendingCash: 50.00,
             investingCash: 120.00,
@@ -187,14 +188,13 @@
             try {
                 let response = await fetch(`${API_URL}&symbol=${ticker.toUpperCase()}`);
                 let data = await response.json();
-                return data.c && data.c !== 0 ? data.c : 50.00; // Backup pricing placeholder if network cuts out
+                return data.c && data.c !== 0 ? data.c : 50.00;
             } catch (e) {
                 return 50.00;
             }
         }
 
         async function updateDashboard() {
-            // Update Text Figures
             document.getElementById('spending-cash-val').innerText = `$${appData.spendingCash.toFixed(2)}`;
             document.getElementById('investing-cash-val').innerText = `$${appData.investingCash.toFixed(2)}`;
 
@@ -219,8 +219,8 @@
                 `;
             }
 
-            let grandTotalInvesting = appData.investingCash + accumulatedStockValue;
-            document.getElementById('total-investing-val').innerText = `$${grandTotalInvesting.toFixed(2)}`;
+            currentGrandTotalInvesting = appData.investingCash + accumulatedStockValue;
+            document.getElementById('total-investing-val').innerText = `$${currentGrandTotalInvesting.toFixed(2)}`;
             
             renderChart();
         }
@@ -232,7 +232,6 @@
                 let panel = document.getElementById('admin-panel');
                 panel.style.display = panel.style.display === "block" ? "none" : "block";
                 
-                // Populate inputs with current numbers
                 document.getElementById('input-spending-cash').value = appData.spendingCash;
                 document.getElementById('input-investing-cash').value = appData.investingCash;
                 document.getElementById('input-t1').value = appData.stocks[0]?.ticker || '';
@@ -244,7 +243,7 @@
             }
         }
 
-        function saveData() {
+        async function saveData() {
             appData.spendingCash = parseFloat(document.getElementById('input-spending-cash').value) || 0;
             appData.investingCash = parseFloat(document.getElementById('input-investing-cash').value) || 0;
             
@@ -253,13 +252,22 @@
                 { ticker: document.getElementById('input-t2').value.toUpperCase(), shares: parseFloat(document.getElementById('input-s2').value) || 0 }
             ];
 
-            // Append performance checkpoint for trend chart
+            // Re-calculate live balance to log history point perfectly
+            let accumulatedStockValue = 0;
+            for(let item of appData.stocks) {
+                if(!item.ticker) continue;
+                let price = await fetchStockPrice(item.ticker);
+                accumulatedStockValue += (price * item.shares);
+            }
+            let totalToLog = appData.investingCash + accumulatedStockValue;
+
             let today = new Date().toLocaleDateString();
-            let estimatedTotal = appData.investingCash + (appData.stocks[0].shares * 40) + (appData.stocks[1].shares * 280); // baseline placeholder
             
-            // Limit logging duplicate updates for the same day
-            if(appData.history[appData.history.length - 1]?.date !== today) {
-                appData.history.push({ date: today, balance: estimatedTotal });
+            if(appData.history.length === 0 || appData.history[appData.history.length - 1]?.date !== today) {
+                appData.history.push({ date: today, balance: totalToLog });
+            } else {
+                // If update happens on same day, adjust the current day's metric
+                appData.history[appData.history.length - 1].balance = totalToLog;
             }
 
             localStorage.setItem('daniel_app_data', JSON.stringify(appData));
@@ -269,7 +277,10 @@
 
         function clearHistory() {
             if(confirm("Are you sure you want to wipe performance chart metrics history?")) {
-                appData.history = [];
+                let today = new Date().toLocaleDateString();
+                // Instead of completely leaving it blank, immediately seed it with today's current figure
+                appData.history = [{ date: today, balance: currentGrandTotalInvesting }];
+                
                 localStorage.setItem('daniel_app_data', JSON.stringify(appData));
                 updateDashboard();
             }

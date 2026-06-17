@@ -165,8 +165,6 @@
     <script>
         // --- CONSTANTS AND STATE ---
         const PIN = "1979";
-        
-        // Publicly open sandboxed token for reliable client-side dashboard execution
         const FINNHUB_KEY = "d8pckh1r01qgoi5i2qe0d8pckh1r01qgoi5i2qeg"; 
 
         let currentGrandTotalInvesting = 0;
@@ -190,7 +188,6 @@
                 let response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker.toUpperCase()}&token=${FINNHUB_KEY}`);
                 let data = await response.json();
                 
-                // Finnhub uses "c" to denote current market price
                 if (data && data.c) {
                     let price = parseFloat(data.c);
                     if (price !== 0) return price;
@@ -211,13 +208,12 @@
             
             let accumulatedStockValue = 0;
 
-            // Calls execute simultaneously now without hitting rate boundaries
             for(let i = 0; i < appData.stocks.length; i++) {
                 let item = appData.stocks[i];
                 if(!item.ticker) continue;
                 
                 let price = await fetchStockPrice(item.ticker, item.lastPrice);
-                item.lastPrice = price; // Store price to persistent cache structure
+                item.lastPrice = price; 
                 
                 let totalValue = price * item.shares;
                 accumulatedStockValue += totalValue;
@@ -232,11 +228,10 @@
                 `;
             }
 
-            localStorage.setItem('daniel_app_data', JSON.stringify(appData));
-
             currentGrandTotalInvesting = appData.investingCash + accumulatedStockValue;
             document.getElementById('total-investing-val').innerText = `$${currentGrandTotalInvesting.toFixed(2)}`;
             
+            localStorage.setItem('daniel_app_data', JSON.stringify(appData));
             renderChart();
         }
 
@@ -276,35 +271,30 @@
                 }
             ];
 
-            let accumulatedStockValue = 0;
-            for(let i = 0; i < appData.stocks.length; i++) {
-                let item = appData.stocks[i];
-                if(!item.ticker) continue;
-                let price = await fetchStockPrice(item.ticker, item.lastPrice);
-                item.lastPrice = price;
-                accumulatedStockValue += (price * item.shares);
-            }
-            let totalToLog = appData.investingCash + accumulatedStockValue;
+            // Wait fully for new stock calculations to complete before updating totals
+            await updateDashboard();
 
             let today = new Date().toLocaleDateString();
-            
             if(appData.history.length === 0 || appData.history[appData.history.length - 1]?.date !== today) {
-                appData.history.push({ date: today, balance: totalToLog });
+                appData.history.push({ date: today, balance: currentGrandTotalInvesting });
             } else {
-                appData.history[appData.history.length - 1].balance = totalToLog;
+                appData.history[appData.history.length - 1].balance = currentGrandTotalInvesting;
             }
 
             localStorage.setItem('daniel_app_data', JSON.stringify(appData));
             document.getElementById('admin-panel').style.display = "none";
-            updateDashboard();
+            renderChart();
         }
 
-        function clearHistory() {
+        async function clearHistory() {
             if(confirm("Are you sure you want to wipe performance chart metrics history?")) {
+                // Ensure dashboard calculation finishes first so we log the updated numbers
+                await updateDashboard(); 
+                
                 let today = new Date().toLocaleDateString();
                 appData.history = [{ date: today, balance: currentGrandTotalInvesting }];
                 localStorage.setItem('daniel_app_data', JSON.stringify(appData));
-                updateDashboard();
+                renderChart();
             }
         }
 
@@ -342,7 +332,6 @@
             });
         }
 
-        // App starts immediately, loads Finnhub values, and respects admin dashboard panel changes permanently
         updateDashboard();
     </script>
 </body>

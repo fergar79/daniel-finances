@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Investment Tracker</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        h1 { text-align: center; color: #1e293b; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #64748b; margin-top: 0; font-size: 14px; margin-bottom: 30px; }
+        .section {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+        }
+        .section-title { font-weight: bold; color: #475569; margin-bottom: 10px; font-size: 16px; }
+        .balance { font-size: 32px; font-weight: bold; color: #0f172a; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #e2e8f0; }
+        th { color: #64748b; font-size: 13px; }
+        td { font-size: 15px; font-weight: 500; }
+        .cash-row { background-color: #f1f5f9; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🚀 Portfolio & Savings Dashboard</h1>
+    <p class="subtitle">Track your spending goals and real market investments</p>
+
+    <div class="section">
+        <div class="section-title">💰 Pretend Spending Money (Cash)</div>
+        <div class="balance">$50.00</div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">📈 Fidelity Custodial Account Positions</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Asset / Ticker</th>
+                    <th>Shares / Type</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Roblox (RBLX)</td>
+                    <td>5 Shares</td>
+                </tr>
+                <tr>
+                    <td>McDonald's (MCD)</td>
+                    <td>2 Shares</td>
+                </tr>
+                <tr class="cash-row">
+                    <td>Fidelity Cash Balance</td>
+                    <td>$120.00</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</body>
+</html>

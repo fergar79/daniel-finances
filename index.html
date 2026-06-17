@@ -149,8 +149,8 @@
             </div>
             
             <div class="form-group" style="display:inline-block; width:48%; margin-right:2%;">
-                <label>Stock Ticker 2 (e.g., MCD)</label>
-                <input type="text" id="input-t2" placeholder="MCD">
+                <label>Stock Ticker 2 (e.g., SPY)</label>
+                <input type="text" id="input-t2" placeholder="SPY">
             </div>
             <div class="form-group" style="display:inline-block; width:48%;">
                 <label>Shares Count</label>
@@ -165,8 +165,10 @@
     <script>
         // --- CONSTANTS AND STATE ---
         const PIN = "1979";
+        
+        // PASTE YOUR ALPHA VANTAGE API KEY BELOW INDEED
+        const API_KEY = "67D96T43YD34PMMX"; 
 
-        // Global variable to keep track of current grand total for accurate logging
         let currentGrandTotalInvesting = 0;
 
         let appData = JSON.parse(localStorage.getItem('daniel_app_data')) || {
@@ -174,7 +176,7 @@
             investingCash: 120.00,
             stocks: [
                 { ticker: 'RBLX', shares: 5 },
-                { ticker: 'MCD', shares: 2 }
+                { ticker: 'SPY', shares: 2 }
             ],
             history: [
                 { date: '2026-06-15', balance: 500 },
@@ -183,19 +185,23 @@
         };
 
         // --- LIVE STOCK DATA & RENDERING ---
-// --- LIVE STOCK DATA & RENDERING ---
         async function fetchStockPrice(ticker) {
+            if (!API_KEY || API_KEY === "YOUR_KEY_HERE") {
+                return 50.00;
+            }
             try {
-                // Uses an open public data API that doesn't require keys or CORS workarounds
-                let response = await fetch(`https://api.openfmd.com/v1/ticker/${ticker.toUpperCase()}/quote`);
+                let response = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${ticker.toUpperCase()}&apikey=${API_KEY}`);
                 let data = await response.json();
                 
-                // Pulls the regular market price field from the payload
-                let price = data.regularMarketPrice || data.price || data.close;
-                return price && price !== 0 ? price : 50.00;
+                // Extract price from Alpha Vantage structural JSON format
+                if (data["Global Quote"] && data["Global Quote"]["05. price"]) {
+                    let price = parseFloat(data["Global Quote"]["05. price"]);
+                    return price !== 0 ? price : 50.00;
+                }
+                return 50.00;
             } catch (e) {
                 console.error("API Error: ", e);
-                return 50.00; // Backup pricing placeholder if network cuts out
+                return 50.00;
             }
         }
 
@@ -257,7 +263,6 @@
                 { ticker: document.getElementById('input-t2').value.toUpperCase(), shares: parseFloat(document.getElementById('input-s2').value) || 0 }
             ];
 
-            // Re-calculate live balance to log history point perfectly
             let accumulatedStockValue = 0;
             for(let item of appData.stocks) {
                 if(!item.ticker) continue;
@@ -271,7 +276,6 @@
             if(appData.history.length === 0 || appData.history[appData.history.length - 1]?.date !== today) {
                 appData.history.push({ date: today, balance: totalToLog });
             } else {
-                // If update happens on same day, adjust the current day's metric
                 appData.history[appData.history.length - 1].balance = totalToLog;
             }
 
@@ -283,9 +287,7 @@
         function clearHistory() {
             if(confirm("Are you sure you want to wipe performance chart metrics history?")) {
                 let today = new Date().toLocaleDateString();
-                // Seeds the graph with today's current figure instead of leaving it completely blank
                 appData.history = [{ date: today, balance: currentGrandTotalInvesting }];
-                
                 localStorage.setItem('daniel_app_data', JSON.stringify(appData));
                 updateDashboard();
             }
@@ -325,7 +327,8 @@
             });
         }
 
-        // Initialize dashboard fields on load
+        // Wipe old data cache instantly to accept Alpha Vantage structural schema changes
+        localStorage.removeItem('daniel_app_data');
         updateDashboard();
     </script>
 </body>

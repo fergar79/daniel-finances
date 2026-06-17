@@ -165,7 +165,6 @@
     <script>
         // --- CONSTANTS AND STATE ---
         const PIN = "1979";
-        const API_URL = "d8pckh1r01qgoi5i2qe0d8pckh1r01qgoi5i2qeg";
 
         // Global variable to keep track of current grand total for accurate logging
         let currentGrandTotalInvesting = 0;
@@ -184,18 +183,21 @@
         };
 
         // --- LIVE STOCK DATA & RENDERING ---
-       async function fetchStockPrice(ticker) {
-    try {
-        // Uses a public proxy to fetch live Yahoo Finance data without an API key
-        let response = await fetch(`https://query1.financeapp.yahoo.com/v8/finance/chart/${ticker.toUpperCase()}`);
-        let data = await response.json();
-        let price = data.chart.result[0].meta.regularMarketPrice;
-        return price && price !== 0 ? price : 50.00;
-    } catch (e) {
-        console.error("API Error: ", e);
-        return 50.00; // Keep backup placeholder just in case
-    }
-}
+        async function fetchStockPrice(ticker) {
+            try {
+                // Uses a public CORS bridge proxy to fetch live Yahoo Finance data smoothly
+                let proxyUrl = "https://cors-anywhere.herokuapp.com/";
+                let targetUrl = `https://query1.financeapp.yahoo.com/v8/finance/chart/${ticker.toUpperCase()}`;
+                
+                let response = await fetch(proxyUrl + targetUrl);
+                let data = await response.json();
+                let price = data.chart.result[0].meta.regularMarketPrice;
+                return price && price !== 0 ? price : 50.00;
+            } catch (e) {
+                console.error("API Error: ", e);
+                return 50.00; // Fallback safety placeholder if network cuts out
+            }
+        }
 
         async function updateDashboard() {
             document.getElementById('spending-cash-val').innerText = `$${appData.spendingCash.toFixed(2)}`;
@@ -281,7 +283,7 @@
         function clearHistory() {
             if(confirm("Are you sure you want to wipe performance chart metrics history?")) {
                 let today = new Date().toLocaleDateString();
-                // Instead of completely leaving it blank, immediately seed it with today's current figure
+                // Seeds the graph with today's current figure instead of leaving it completely blank
                 appData.history = [{ date: today, balance: currentGrandTotalInvesting }];
                 
                 localStorage.setItem('daniel_app_data', JSON.stringify(appData));

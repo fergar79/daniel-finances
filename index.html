@@ -29,6 +29,7 @@
             display: grid;
             grid-template-columns: 3fr 1fr;
             gap: 20px;
+            margin-bottom: 20px;
         }
         @media (max-width: 768px) {
             .dashboard-grid { grid-template-columns: 1fr; }
@@ -82,6 +83,11 @@
             color: white;
         }
         .chart-container { margin-top: 25px; height: 250px; }
+
+        /* Weekly Gains Panel Style */
+        .gain-positive { color: #4ade80 !important; }
+        .gain-negative { color: #f87171 !important; }
+        .gain-neutral { color: #94a3b8 !important; }
     </style>
 </head>
 <body>
@@ -93,7 +99,7 @@
 
     <div class="dashboard-grid">
         <div class="card">
-            <h2>📈 Fidelity Custodial Investment Account (75%)</h2>
+            <h2>📈 Fidelity Custodial Investment Account</h2>
             <div class="big-balance" id="total-investing-val">$0.00</div>
             
             <div><span style="color:#94a3b8">Fidelity Cash Core:</span> <strong id="investing-cash-val">$0.00</strong></div>
@@ -117,11 +123,22 @@
         </div>
 
         <div class="card">
-            <h2>💰 Spending Money (25%)</h2>
+            <h2>💰 Spending Money</h2>
             <p style="color: #94a3b8; font-size: 13px; margin-top:0;">Pretend Cash Account</p>
             <div class="big-balance" style="color: #4ade80;" id="spending-cash-val">$0.00</div>
             <p style="font-size: 14px; color: #cbd5e1; line-height: 1.4;">This money is safely held out of the stock market for standard dynamic spending.</p>
         </div>
+    </div>
+
+    <div class="card" style="margin-top: 20px;">
+        <h2>📊 Weekly Stock Market Performance</h2>
+        <div style="display: flex; align-items: baseline; gap: 15px;">
+            <div class="big-balance gain-neutral" id="weekly-gain-val">$0.00</div>
+            <div style="font-size: 14px; color: #94a3b8;" id="weekly-gain-pct">(0.00%)</div>
+        </div>
+        <p style="font-size: 13px; color: #cbd5e1; margin: 0; line-height: 1.4;">
+            Calculated strictly from shifting stock equity prices since last Sunday at 9:00 PM. Cash balances are excluded.
+        </p>
     </div>
 
     <div id="admin-panel" class="admin-panel">
@@ -179,8 +196,23 @@
             history: [
                 { date: '2026-06-15', balance: 500 },
                 { date: '2026-06-16', balance: 550 }
-            ]
+            ],
+            lastSundayBaseline: null,  // Tracks baseline stock market value
+            lastSundayTimestamp: null  // Tracks the timestamp of the lock target
         };
+
+        // Helper calculation to locate the immediate previous Sunday at 9:00 PM target
+        function getTargetSundayTime() {
+            let now = new Date();
+            let target = new Date(now);
+            
+            let currentDay = now.getDay(); // 0 is Sunday
+            let daysToSubtract = currentDay === 0 ? (now.getHours() >= 21 ? 0 : 7) : currentDay;
+            
+            target.setDate(now.getDate() - daysToSubtract);
+            target.setHours(21, 0, 0, 0);
+            return target.getTime();
+        }
 
         // --- LIVE STOCK DATA & RENDERING ---
         async function fetchStockPrice(ticker, fallbackPrice) {
@@ -231,6 +263,37 @@
             currentGrandTotalInvesting = appData.investingCash + accumulatedStockValue;
             document.getElementById('total-investing-val').innerText = `$${currentGrandTotalInvesting.toFixed(2)}`;
             
+            // --- WEEKLY PERFORMANCE EVALUATION ENGINE ---
+            let targetSundayTs = getTargetSundayTime();
+            
+            // If the baseline doesn't exist, or we have transitioned into a brand new weekly cycle
+            if (!appData.lastSundayTimestamp || appData.lastSundayTimestamp !== targetSundayTs || appData.lastSundayBaseline === null) {
+                appData.lastSundayBaseline = accumulatedStockValue;
+                appData.lastSundayTimestamp = targetSundayTs;
+            }
+
+            let weeklyGainLoss = accumulatedStockValue - appData.lastSundayBaseline;
+            let weeklyPct = appData.lastSundayBaseline > 0 ? (weeklyGainLoss / appData.lastSundayBaseline) * 100 : 0;
+
+            let displayGainVal = document.getElementById('weekly-gain-val');
+            let displayGainPct = document.getElementById('weekly-gain-pct');
+
+            displayGainPct.innerText = `(${weeklyGainLoss >= 0 ? '+' : ''}${weeklyPct.toFixed(2)}%)`;
+
+            if (weeklyGainLoss > 0) {
+                displayGainVal.innerText = `+$${weeklyGainLoss.toFixed(2)}`;
+                displayGainVal.className = "big-balance gain-positive";
+                displayGainPct.className = "gain-positive";
+            } else if (weeklyGainLoss < 0) {
+                displayGainVal.innerText = `-$${Math.abs(weeklyGainLoss).toFixed(2)}`;
+                displayGainVal.className = "big-balance gain-negative";
+                displayGainPct.className = "gain-negative";
+            } else {
+                displayGainVal.innerText = `$0.00`;
+                displayGainVal.className = "big-balance gain-neutral";
+                displayGainPct.className = "gain-neutral";
+            }
+
             localStorage.setItem('daniel_app_data', JSON.stringify(appData));
             renderChart();
         }
@@ -271,7 +334,6 @@
                 }
             ];
 
-            // Wait fully for new stock calculations to complete before updating totals
             await updateDashboard();
 
             let today = new Date().toLocaleDateString();
@@ -288,7 +350,6 @@
 
         async function clearHistory() {
             if(confirm("Are you sure you want to wipe performance chart metrics history?")) {
-                // Ensure dashboard calculation finishes first so we log the updated numbers
                 await updateDashboard(); 
                 
                 let today = new Date().toLocaleDateString();

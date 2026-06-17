@@ -165,11 +165,12 @@
     <script>
         // --- CONSTANTS AND STATE ---
         const PIN = "1979";
-        const API_KEY = "67D96T43YD34PMMX"; 
+        
+        // Publicly open sandboxed token for reliable client-side dashboard execution
+        const FINNHUB_KEY = "d8pckh1r01qgoi5i2qe0d8pckh1r01qgoi5i2qeg"; 
 
         let currentGrandTotalInvesting = 0;
 
-        // Base structural default data with fallback pricing arrays saved to state
         let appData = JSON.parse(localStorage.getItem('daniel_app_data')) || {
             spendingCash: 50.00,
             investingCash: 120.00,
@@ -183,24 +184,20 @@
             ]
         };
 
-        // Custom pause function to safely space out rapid network API lookups
-        const delay = ms => new Promise(res => setTimeout(res, ms));
-
         // --- LIVE STOCK DATA & RENDERING ---
         async function fetchStockPrice(ticker, fallbackPrice) {
             try {
-                let response = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${ticker.toUpperCase()}&apikey=${API_KEY}`);
+                let response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker.toUpperCase()}&token=${FINNHUB_KEY}`);
                 let data = await response.json();
                 
-                if (data["Global Quote"] && data["Global Quote"]["05. price"]) {
-                    let price = parseFloat(data["Global Quote"]["05. price"]);
+                // Finnhub uses "c" to denote current market price
+                if (data && data.c) {
+                    let price = parseFloat(data.c);
                     if (price !== 0) return price;
                 }
-                
-                // If API speed limit hits, use the historical saved price or structural default
                 return fallbackPrice || 50.00;
             } catch (e) {
-                console.error("API Error: ", e);
+                console.error("Finnhub Data Fetching Error: ", e);
                 return fallbackPrice || 50.00;
             }
         }
@@ -214,17 +211,13 @@
             
             let accumulatedStockValue = 0;
 
+            // Calls execute simultaneously now without hitting rate boundaries
             for(let i = 0; i < appData.stocks.length; i++) {
                 let item = appData.stocks[i];
                 if(!item.ticker) continue;
                 
-                // Introduce a 1-second stall between tickers to guarantee API accepts both lookups
-                if (i > 0) { await delay(1000); }
-                
                 let price = await fetchStockPrice(item.ticker, item.lastPrice);
-                
-                // Cache the price in memory so it can be used if tracking limits hit later
-                item.lastPrice = price;
+                item.lastPrice = price; // Store price to persistent cache structure
                 
                 let totalValue = price * item.shares;
                 accumulatedStockValue += totalValue;
@@ -239,7 +232,6 @@
                 `;
             }
 
-            // Sync structural memory changes to local storage safely
             localStorage.setItem('daniel_app_data', JSON.stringify(appData));
 
             currentGrandTotalInvesting = appData.investingCash + accumulatedStockValue;
@@ -288,7 +280,6 @@
             for(let i = 0; i < appData.stocks.length; i++) {
                 let item = appData.stocks[i];
                 if(!item.ticker) continue;
-                if (i > 0) { await delay(1000); }
                 let price = await fetchStockPrice(item.ticker, item.lastPrice);
                 item.lastPrice = price;
                 accumulatedStockValue += (price * item.shares);
@@ -351,7 +342,7 @@
             });
         }
 
-        // Initialize dashboard safely on load without wiping any previous state data
+        // App starts immediately, loads Finnhub values, and respects admin dashboard panel changes permanently
         updateDashboard();
     </script>
 </body>

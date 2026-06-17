@@ -184,15 +184,18 @@
         };
 
         // --- LIVE STOCK DATA & RENDERING ---
-        async function fetchStockPrice(ticker) {
-            try {
-                let response = await fetch(`${API_URL}&symbol=${ticker.toUpperCase()}`);
-                let data = await response.json();
-                return data.c && data.c !== 0 ? data.c : 50.00;
-            } catch (e) {
-                return 50.00;
-            }
-        }
+       async function fetchStockPrice(ticker) {
+    try {
+        // Uses a public proxy to fetch live Yahoo Finance data without an API key
+        let response = await fetch(`https://query1.financeapp.yahoo.com/v8/finance/chart/${ticker.toUpperCase()}`);
+        let data = await response.json();
+        let price = data.chart.result[0].meta.regularMarketPrice;
+        return price && price !== 0 ? price : 50.00;
+    } catch (e) {
+        console.error("API Error: ", e);
+        return 50.00; // Keep backup placeholder just in case
+    }
+}
 
         async function updateDashboard() {
             document.getElementById('spending-cash-val').innerText = `$${appData.spendingCash.toFixed(2)}`;

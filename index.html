@@ -24,7 +24,7 @@
         }
         h1 { margin: 0; font-size: 24px; color: #38bdf8; }
         
-        /* 75% / 25% Grid Layout */
+        /* Layout Grid */
         .dashboard-grid {
             display: grid;
             grid-template-columns: 3fr 1fr;
@@ -70,7 +70,7 @@
             margin-top: 20px;
             padding: 20px;
             border-radius: 12px;
-            display: none; /* Hidden by default */
+            display: none; 
         }
         .form-group { margin-bottom: 12px; }
         label { display: block; font-size: 13px; color: #cbd5e1; margin-bottom: 5px; }
@@ -84,7 +84,15 @@
         }
         .chart-container { margin-top: 25px; height: 250px; }
 
-        /* Weekly Gains Panel Style */
+        /* Custom Typography Modifications */
+        .allowance-text {
+            font-size: 20px;
+            font-weight: 800;
+            color: #64748b;
+            letter-spacing: 0.05em;
+            margin-top: 20px;
+            margin-bottom: 5px;
+        }
         .gain-positive { color: #4ade80 !important; }
         .gain-negative { color: #f87171 !important; }
         .gain-neutral { color: #94a3b8 !important; }
@@ -122,22 +130,21 @@
             </div>
         </div>
 
-        <div class="card">
+        <div class="card" style="display: flex; flex-direction: column; justify-content: flex-start;">
             <h2>💰 Spending Money</h2>
-            <p style="color: #94a3b8; font-size: 13px; margin-top:0;">Pretend Cash Account</p>
-            <div class="big-balance" style="color: #4ade80;" id="spending-cash-val">$0.00</div>
-            <p style="font-size: 14px; color: #cbd5e1; line-height: 1.4;">This money is safely held out of the stock market for standard dynamic spending.</p>
+            <div class="big-balance" style="color: #4ade80; margin-bottom: 5px;" id="spending-cash-val">$0.00</div>
+            <div class="allowance-text">ALLOWANCE</div>
         </div>
     </div>
 
     <div class="card" style="margin-top: 20px;">
-        <h2>📊 Weekly Stock Market Performance</h2>
+        <h2>📊 Weekly Investing Performance</h2>
         <div style="display: flex; align-items: baseline; gap: 15px;">
             <div class="big-balance gain-neutral" id="weekly-gain-val">$0.00</div>
             <div style="font-size: 14px; color: #94a3b8;" id="weekly-gain-pct">(0.00%)</div>
         </div>
         <p style="font-size: 13px; color: #cbd5e1; margin: 0; line-height: 1.4;">
-            Calculated strictly from shifting stock equity prices since last Sunday at 9:00 PM. Cash balances are excluded.
+            Calculated Every Sunday
         </p>
     </div>
 
@@ -197,16 +204,15 @@
                 { date: '2026-06-15', balance: 500 },
                 { date: '2026-06-16', balance: 550 }
             ],
-            lastSundayBaseline: null,  // Tracks baseline stock market value
-            lastSundayTimestamp: null  // Tracks the timestamp of the lock target
+            lastSundayBaseline: null,  
+            lastSundayTimestamp: null  
         };
 
-        // Helper calculation to locate the immediate previous Sunday at 9:00 PM target
         function getTargetSundayTime() {
             let now = new Date();
             let target = new Date(now);
             
-            let currentDay = now.getDay(); // 0 is Sunday
+            let currentDay = now.getDay(); 
             let daysToSubtract = currentDay === 0 ? (now.getHours() >= 21 ? 0 : 7) : currentDay;
             
             target.setDate(now.getDate() - daysToSubtract);
@@ -263,10 +269,9 @@
             currentGrandTotalInvesting = appData.investingCash + accumulatedStockValue;
             document.getElementById('total-investing-val').innerText = `$${currentGrandTotalInvesting.toFixed(2)}`;
             
-            // --- WEEKLY PERFORMANCE EVALUATION ENGINE ---
+            // --- WEEKLY PERFORMANCE ENGINE ---
             let targetSundayTs = getTargetSundayTime();
             
-            // If the baseline doesn't exist, or we have transitioned into a brand new weekly cycle
             if (!appData.lastSundayTimestamp || appData.lastSundayTimestamp !== targetSundayTs || appData.lastSundayBaseline === null) {
                 appData.lastSundayBaseline = accumulatedStockValue;
                 appData.lastSundayTimestamp = targetSundayTs;

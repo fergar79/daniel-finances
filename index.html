@@ -73,6 +73,8 @@
         th { color: #64748b; font-size: 13px; text-transform: uppercase; }
         td { font-size: 15px; }
         .stock-ticker { font-weight: bold; color: #38bdf8; }
+        .stock-link { text-decoration: none; color: #38bdf8; }
+        .stock-link:hover { text-decoration: underline; }
         
         /* Buttons & Forms */
         button {
@@ -309,7 +311,11 @@
 
                 tableBody.innerHTML += `
                     <tr>
-                        <td class="stock-ticker">${item.ticker.toUpperCase()}</td>
+                        <td class="stock-ticker">
+                            <a class="stock-link" href="https://www.investing.com/search/?q=${item.ticker.toUpperCase()}" target="_blank">
+                                ${item.ticker.toUpperCase()}
+                            </a>
+                        </td>
                         <td>${item.shares}</td>
                         <td>$${(item.buyPrice || 0).toFixed(2)}</td>
                         <td>$${price.toFixed(2)}</td>

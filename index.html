@@ -54,6 +54,24 @@
             margin-bottom: 20px;
         }
 
+        /* Update Metadata Row */
+        .table-meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            font-size: 13px;
+            color: #94a3b8;
+        }
+        .btn-refresh {
+            background-color: #334155;
+            color: #cbd5e1;
+            padding: 4px 10px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+        .btn-refresh:hover { background-color: #475569; }
+
         /* Charts Section Layout */
         .charts-grid {
             display: grid;
@@ -68,7 +86,7 @@
         .chart-container-donut { height: 260px; position: relative; }
 
         /* Tables */
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; }
         th, td { text-align: left; padding: 12px; border-bottom: 1px solid #334155; }
         th { color: #64748b; font-size: 13px; text-transform: uppercase; }
         td { font-size: 15px; }
@@ -107,6 +125,16 @@
             color: white;
         }
 
+        .stock-admin-row {
+            background-color: #1e293b; 
+            padding: 12px; 
+            border-radius: 8px; 
+            margin-bottom: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        .stock-admin-row .form-group { margin-bottom: 0; flex: 1; }
+
         .allowance-text {
             font-size: 20px;
             font-weight: 800;
@@ -136,6 +164,11 @@
                 <span style="color:#94a3b8; font-size: 13px; font-weight: bold; text-transform: uppercase;">Fidelity Cash Core</span>
                 <div style="font-size: 28px; font-weight: 800; color: #ffffff; margin-top: 5px;" id="investing-cash-val">$0.00</div>
             </div>
+
+            <div class="table-meta-row">
+                <span id="last-updated-ts">Last updated: --:--</span>
+                <button class="btn-refresh" onclick="updateDashboard()">🔄 Refresh Prices</button>
+            </div>
             
             <table>
                 <thead>
@@ -145,7 +178,8 @@
                         <th>Buy Price</th>
                         <th>Live Price</th>
                         <th>Total Value</th>
-                        <th>Gain / Loss</th>
+                        <th>Gain / Loss ($)</th>
+                        <th>Gain / Loss (%)</th>
                     </tr>
                 </thead>
                 <tbody id="stock-table-body">
@@ -194,37 +228,9 @@
         </div>
         
         <div style="border-top: 1px solid #475569; margin: 15px 0; padding-top:10px;">
-            <p style="font-size: 13px; font-weight:bold; margin:0 0 10px 0;">Manage Stock Holdings:</p>
+            <p style="font-size: 13px; font-weight:bold; margin:0 0 10px 0;">Manage Stock Holdings (Up to 6):</p>
             
-            <div style="background-color: #1e293b; padding: 12px; border-radius: 8px; margin-bottom: 10px;">
-                <div class="form-group" style="display:inline-block; width:31%; margin-right:2%;">
-                    <label>Stock Ticker 1</label>
-                    <input type="text" id="input-t1" placeholder="RBLX">
-                </div>
-                <div class="form-group" style="display:inline-block; width:31%; margin-right:2%;">
-                    <label>Shares Count</label>
-                    <input type="number" id="input-s1" step="0.01">
-                </div>
-                <div class="form-group" style="display:inline-block; width:32%;">
-                    <label>Buy Price ($)</label>
-                    <input type="number" id="input-b1" step="0.01">
-                </div>
-            </div>
-
-            <div style="background-color: #1e293b; padding: 12px; border-radius: 8px;">
-                <div class="form-group" style="display:inline-block; width:31%; margin-right:2%;">
-                    <label>Stock Ticker 2</label>
-                    <input type="text" id="input-t2" placeholder="SPY">
-                </div>
-                <div class="form-group" style="display:inline-block; width:31%; margin-right:2%;">
-                    <label>Shares Count</label>
-                    <input type="number" id="input-s2" step="0.01">
-                </div>
-                <div class="form-group" style="display:inline-block; width:32%;">
-                    <label>Buy Price ($)</label>
-                    <input type="number" id="input-b2" step="0.01">
-                </div>
-            </div>
+            <div id="admin-stocks-container"></div>
         </div>
 
         <button onclick="saveData()">Save Changes & Log History</button>
@@ -238,12 +244,17 @@
 
         let currentGrandTotalInvesting = 0;
 
+        // Automatically structure data array for up to 6 stocks
         let appData = JSON.parse(localStorage.getItem('daniel_app_data')) || {
             spendingCash: 50.00,
             investingCash: 72.00,
             stocks: [
                 { ticker: 'RBLX', shares: 2, buyPrice: 49.00, lastPrice: 40.00 },
-                { ticker: 'SPY', shares: 0, buyPrice: 0.00, lastPrice: 0.00 }
+                { ticker: 'SPY', shares: 0, buyPrice: 0.00, lastPrice: 0.00 },
+                { ticker: '', shares: 0, buyPrice: 0.00, lastPrice: 0.00 },
+                { ticker: '', shares: 0, buyPrice: 0.00, lastPrice: 0.00 },
+                { ticker: '', shares: 0, buyPrice: 0.00, lastPrice: 0.00 },
+                { ticker: '', shares: 0, buyPrice: 0.00, lastPrice: 0.00 }
             ],
             history: [
                 { date: '2026-06-15', balance: 170.00 }
@@ -251,6 +262,11 @@
             lastSundayBaseline: null,  
             lastSundayTimestamp: null  
         };
+
+        // Ensure array always has 6 items if updated from a legacy version
+        while(appData.stocks.length < 6) {
+            appData.stocks.push({ ticker: '', shares: 0, buyPrice: 0.00, lastPrice: 0.00 });
+        }
 
         function getTargetSundayTime() {
             let now = new Date();
@@ -287,13 +303,13 @@
             
             let accumulatedStockValue = 0;
 
-            // Allocation arrays for doughnut chart visualizer
             let breakdownLabels = ['Fidelity Cash Core', 'Spending Cash'];
             let breakdownValues = [appData.investingCash, appData.spendingCash];
 
             for(let i = 0; i < appData.stocks.length; i++) {
                 let item = appData.stocks[i];
-                if(!item.ticker) continue;
+                // CRITICAL CRITERIA: Skip if no ticker OR if shares count is 0 or less
+                if(!item.ticker || item.shares <= 0) continue;
                 
                 let price = await fetchStockPrice(item.ticker, item.lastPrice);
                 item.lastPrice = price; 
@@ -301,6 +317,10 @@
                 let totalValue = price * item.shares;
                 let totalCost = (item.buyPrice || 0) * item.shares;
                 let netGainLoss = totalValue - totalCost;
+                
+                // Percentage Calculation 
+                let pctGainLoss = item.buyPrice > 0 ? (netGainLoss / totalCost) * 100 : 0;
+                
                 accumulatedStockValue += totalValue;
 
                 breakdownLabels.push(item.ticker.toUpperCase());
@@ -321,6 +341,7 @@
                         <td>$${price.toFixed(2)}</td>
                         <td>$${totalValue.toFixed(2)}</td>
                         <td class="${badgeClass}">${prefix}$${netGainLoss.toFixed(2)}</td>
+                        <td class="${badgeClass}">${prefix}${pctGainLoss.toFixed(2)}%</td>
                     </tr>
                 `;
             }
@@ -328,6 +349,10 @@
             currentGrandTotalInvesting = appData.investingCash + accumulatedStockValue;
             document.getElementById('total-investing-val').innerText = `$${currentGrandTotalInvesting.toFixed(2)}`;
             
+            // Set Timestamp
+            let currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('last-updated-ts').innerText = `Last updated: ${currentTime}`;
+
             // --- WEEKLY PERFORMANCE ENGINE ---
             let targetSundayTs = getTargetSundayTime();
             if (!appData.lastSundayTimestamp || appData.lastSundayTimestamp !== targetSundayTs || appData.lastSundayBaseline === null) {
@@ -363,20 +388,44 @@
         }
 
         // --- SECURITY / ADMIN ACCESS ---
+        function generateAdminFormRows() {
+            let container = document.getElementById('admin-stocks-container');
+            container.innerHTML = '';
+            for (let i = 0; i < 6; i++) {
+                container.innerHTML += `
+                    <div class="stock-admin-row">
+                        <div class="form-group">
+                            <label>Stock Ticker ${i + 1}</label>
+                            <input type="text" id="input-t${i}" placeholder="e.g. RBLX">
+                        </div>
+                        <div class="form-group">
+                            <label>Shares Count</label>
+                            <input type="number" id="input-s${i}" step="0.0001">
+                        </div>
+                        <div class="form-group">
+                            <label>Buy Price ($)</label>
+                            <input type="number" id="input-b${i}" step="0.01">
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
         function checkPin() {
             let userPin = prompt("Enter PIN to modify records:");
             if (userPin === PIN) {
+                generateAdminFormRows();
                 let panel = document.getElementById('admin-panel');
                 panel.style.display = panel.style.display === "block" ? "none" : "block";
                 
                 document.getElementById('input-spending-cash').value = appData.spendingCash;
                 document.getElementById('input-investing-cash').value = appData.investingCash;
-                document.getElementById('input-t1').value = appData.stocks[0]?.ticker || '';
-                document.getElementById('input-s1').value = appData.stocks[0]?.shares || 0;
-                document.getElementById('input-b1').value = appData.stocks[0]?.buyPrice || 0;
-                document.getElementById('input-t2').value = appData.stocks[1]?.ticker || '';
-                document.getElementById('input-s2').value = appData.stocks[1]?.shares || 0;
-                document.getElementById('input-b2').value = appData.stocks[1]?.buyPrice || 0;
+                
+                for(let i = 0; i < 6; i++) {
+                    document.getElementById(`input-t${i}`).value = appData.stocks[i]?.ticker || '';
+                    document.getElementById(`input-s${i}`).value = appData.stocks[i]?.shares || 0;
+                    document.getElementById(`input-b${i}`).value = appData.stocks[i]?.buyPrice || 0;
+                }
             } else {
                 alert("Incorrect PIN access denied.");
             }
@@ -387,21 +436,22 @@
             appData.investingCash = parseFloat(document.getElementById('input-investing-cash').value) || 0;
             
             let oldStocks = appData.stocks;
-            appData.stocks = [
-                { 
-                    ticker: document.getElementById('input-t1').value.toUpperCase(), 
-                    shares: parseFloat(document.getElementById('input-s1').value) || 0,
-                    buyPrice: parseFloat(document.getElementById('input-b1').value) || 0,
-                    lastPrice: oldStocks[0]?.ticker === document.getElementById('input-t1').value.toUpperCase() ? oldStocks[0]?.lastPrice : 50.00
-                },
-                { 
-                    ticker: document.getElementById('input-t2').value.toUpperCase(), 
-                    shares: parseFloat(document.getElementById('input-s2').value) || 0,
-                    buyPrice: parseFloat(document.getElementById('input-b2').value) || 0,
-                    lastPrice: oldStocks[1]?.ticker === document.getElementById('input-t2').value.toUpperCase() ? oldStocks[1]?.lastPrice : 50.00
-                }
-            ];
+            let updatedStocks = [];
 
+            for(let i = 0; i < 6; i++) {
+                let currentTicker = document.getElementById(`input-t${i}`).value.toUpperCase().trim();
+                let currentShares = parseFloat(document.getElementById(`input-s${i}`).value) || 0;
+                let currentBuyPrice = parseFloat(document.getElementById(`input-b${i}`).value) || 0;
+                
+                updatedStocks.push({
+                    ticker: currentTicker,
+                    shares: currentShares,
+                    buyPrice: currentBuyPrice,
+                    lastPrice: oldStocks[i]?.ticker === currentTicker ? oldStocks[i]?.lastPrice : 50.00
+                });
+            }
+            
+            appData.stocks = updatedStocks;
             await updateDashboard();
 
             let today = new Date().toLocaleDateString();
@@ -418,11 +468,14 @@
 
         async function clearHistory() {
             if(confirm("Are you sure you want to wipe performance chart metrics history?")) {
-                // Instantly adopt structural initialization limits
                 appData.spendingCash = 50.00;
                 appData.investingCash = 72.00;
                 appData.stocks = [
                     { ticker: 'RBLX', shares: 2, buyPrice: 49.00, lastPrice: 40.00 },
+                    { ticker: '', shares: 0, buyPrice: 0.00, lastPrice: 0.00 },
+                    { ticker: '', shares: 0, buyPrice: 0.00, lastPrice: 0.00 },
+                    { ticker: '', shares: 0, buyPrice: 0.00, lastPrice: 0.00 },
+                    { ticker: '', shares: 0, buyPrice: 0.00, lastPrice: 0.00 },
                     { ticker: '', shares: 0, buyPrice: 0.00, lastPrice: 0.00 }
                 ];
                 appData.lastSundayBaseline = null;
@@ -483,7 +536,7 @@
                     labels: labels,
                     datasets: [{
                         data: values,
-                        backgroundColor: ['#0284c7', '#4ade80', '#c084fc', '#fb923c'],
+                        backgroundColor: ['#0284c7', '#4ade80', '#c084fc', '#fb923c', '#f43f5e', '#10b981', '#a855f7', '#f59e0b'],
                         borderColor: '#1e293b',
                         borderWidth: 2
                     }]

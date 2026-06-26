@@ -265,6 +265,7 @@
         </div>
 
         <button onclick="saveData()">Save Changes & Log History</button>
+        <button style="background-color:#eab308; color:#0f172a;" onclick="resetGainLossBaseline()">Reset GAIN / LOSS to $0</button>
         <button style="background-color:#ef4444;" onclick="clearHistory()">Reset Chart History</button>
     </div>
 
@@ -319,7 +320,6 @@
                     const cloudData = snapshot.val();
                     if (cloudData) {
                         appData = cloudData;
-                        // Backwards safety padding to handle array expansions
                         if (!appData.stocks || appData.stocks.length < 6) {
                             let oldList = appData.stocks || [];
                             while(oldList.length < 6) oldList.push({ ticker: '', shares: 0, buyPrice: 0, lastPrice: 0 });
@@ -494,6 +494,27 @@
             commitStorage();
             document.getElementById('admin-panel').style.display = "none";
             updateDashboard(false);
+        }
+
+        async function resetGainLossBaseline() {
+            if(confirm("Reset current stock gains/losses to $0? This will set your buy prices to the current live prices to track performance from this moment forward.")) {
+                for(let i = 0; i < appData.stocks.length; i++) {
+                    let item = appData.stocks[i];
+                    if(item && item.ticker && item.ticker.trim() !== "" && item.shares > 0) {
+                        item.buyPrice = item.lastPrice;
+                    }
+                }
+                
+                await updateDashboard(true);
+                
+                // Update open admin panel inputs instantly to display new values
+                for(let i = 1; i <= 6; i++) {
+                    let s = appData.stocks[i-1] || { ticker: '', shares: 0, buyPrice: 0 };
+                    let field = document.getElementById(`input-b${i}`);
+                    if(field) field.value = s.buyPrice || '';
+                }
+                alert("Gain/Loss reset to $0 successfully!");
+            }
         }
 
         async function clearHistory() {

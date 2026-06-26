@@ -129,6 +129,20 @@
         }
         .sync-local { background-color: #eab308; color: #0f172a; }
         .sync-cloud { background-color: #22c55e; color: #ffffff; }
+
+        /* Admin Stocks Grid Layout */
+        .admin-stocks-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        .admin-stock-card {
+            background-color: #1e293b;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #475569;
+        }
     </style>
 </head>
 <body>
@@ -184,13 +198,13 @@
     </div>
 
     <div class="card" style="margin-top: 20px;">
-        <h2>📊 Weekly Investing Performance</h2>
+        <h2>📊 GAIN / LOSS</h2>
         <div style="display: flex; align-items: baseline; gap: 15px;">
-            <div class="big-balance gain-neutral" id="weekly-gain-val">$0.00</div>
-            <div style="font-size: 14px; color: #94a3b8;" id="weekly-gain-pct">(0.00%)</div>
+            <div class="big-balance gain-neutral" id="total-gain-val">$0.00</div>
+            <div style="font-size: 14px; color: #94a3b8;" id="total-gain-pct">(0.00%)</div>
         </div>
         <p style="font-size: 13px; color: #cbd5e1; margin: 0; line-height: 1.4;">
-            Calculated Every Sunday
+            Live Stock Performance Tracking (Excludes Cash Core Configurations)
         </p>
     </div>
 
@@ -208,35 +222,44 @@
         </div>
         
         <div style="border-top: 1px solid #475569; margin: 15px 0; padding-top:10px;">
-            <p style="font-size: 13px; font-weight:bold; margin:0 0 10px 0;">Manage Stock Holdings:</p>
+            <p style="font-size: 13px; font-weight:bold; margin:0 0 10px 0;">Manage Stock Holdings (Up to 6):</p>
             
-            <div style="background-color: #1e293b; padding: 12px; border-radius: 8px; margin-bottom: 10px;">
-                <div class="form-group" style="display:inline-block; width:31%; margin-right:2%;">
-                    <label>Stock Ticker 1</label>
-                    <input type="text" id="input-t1" placeholder="RBLX">
+            <div class="admin-stocks-container">
+                <div class="admin-stock-card">
+                    <span style="font-size:12px; font-weight:bold; color:#38bdf8;">Stock Position 1</span>
+                    <div class="form-group" style="margin-top:5px;"><label>Ticker</label><input type="text" id="input-t1" placeholder="RBLX"></div>
+                    <div class="form-group"><label>Shares</label><input type="number" id="input-s1" step="0.01"></div>
+                    <div class="form-group"><label>Buy Price ($)</label><input type="number" id="input-b1" step="0.01"></div>
                 </div>
-                <div class="form-group" style="display:inline-block; width:31%; margin-right:2%;">
-                    <label>Shares Count</label>
-                    <input type="number" id="input-s1" step="0.01">
+                <div class="admin-stock-card">
+                    <span style="font-size:12px; font-weight:bold; color:#38bdf8;">Stock Position 2</span>
+                    <div class="form-group" style="margin-top:5px;"><label>Ticker</label><input type="text" id="input-t2" placeholder="MCD"></div>
+                    <div class="form-group"><label>Shares</label><input type="number" id="input-s2" step="0.01"></div>
+                    <div class="form-group"><label>Buy Price ($)</label><input type="number" id="input-b2" step="0.01"></div>
                 </div>
-                <div class="form-group" style="display:inline-block; width:32%;">
-                    <label>Buy Price ($)</label>
-                    <input type="number" id="input-b1" step="0.01">
+                <div class="admin-stock-card">
+                    <span style="font-size:12px; font-weight:bold; color:#38bdf8;">Stock Position 3</span>
+                    <div class="form-group" style="margin-top:5px;"><label>Ticker</label><input type="text" id="input-t3" placeholder="AAPL"></div>
+                    <div class="form-group"><label>Shares</label><input type="number" id="input-s3" step="0.01"></div>
+                    <div class="form-group"><label>Buy Price ($)</label><input type="number" id="input-b3" step="0.01"></div>
                 </div>
-            </div>
-
-            <div style="background-color: #1e293b; padding: 12px; border-radius: 8px;">
-                <div class="form-group" style="display:inline-block; width:31%; margin-right:2%;">
-                    <label>Stock Ticker 2</label>
-                    <input type="text" id="input-t2" placeholder="MCD">
+                <div class="admin-stock-card">
+                    <span style="font-size:12px; font-weight:bold; color:#38bdf8;">Stock Position 4</span>
+                    <div class="form-group" style="margin-top:5px;"><label>Ticker</label><input type="text" id="input-t4" placeholder="TSLA"></div>
+                    <div class="form-group"><label>Shares</label><input type="number" id="input-s4" step="0.01"></div>
+                    <div class="form-group"><label>Buy Price ($)</label><input type="number" id="input-b4" step="0.01"></div>
                 </div>
-                <div class="form-group" style="display:inline-block; width:31%; margin-right:2%;">
-                    <label>Shares Count</label>
-                    <input type="number" id="input-s2" step="0.01">
+                <div class="admin-stock-card">
+                    <span style="font-size:12px; font-weight:bold; color:#38bdf8;">Stock Position 5</span>
+                    <div class="form-group" style="margin-top:5px;"><label>Ticker</label><input type="text" id="input-t5" placeholder="NVDA"></div>
+                    <div class="form-group"><label>Shares</label><input type="number" id="input-s5" step="0.01"></div>
+                    <div class="form-group"><label>Buy Price ($)</label><input type="number" id="input-b5" step="0.01"></div>
                 </div>
-                <div class="form-group" style="display:inline-block; width:32%;">
-                    <label>Buy Price ($)</label>
-                    <input type="number" id="input-b2" step="0.01">
+                <div class="admin-stock-card">
+                    <span style="font-size:12px; font-weight:bold; color:#38bdf8;">Stock Position 6</span>
+                    <div class="form-group" style="margin-top:5px;"><label>Ticker</label><input type="text" id="input-t6" placeholder="MSFT"></div>
+                    <div class="form-group"><label>Shares</label><input type="number" id="input-s6" step="0.01"></div>
+                    <div class="form-group"><label>Buy Price ($)</label><input type="number" id="input-b6" step="0.01"></div>
                 </div>
             </div>
         </div>
@@ -270,13 +293,15 @@
             investingCash: 72.00,
             stocks: [
                 { ticker: 'RBLX', shares: 2, buyPrice: 49.00, lastPrice: 49.00 },
-                { ticker: 'MCD', shares: 0, buyPrice: 0.00, lastPrice: 0.00 }
+                { ticker: '', shares: 0, buyPrice: 0.00, lastPrice: 0.00 },
+                { ticker: '', shares: 0, buyPrice: 0.00, lastPrice: 0.00 },
+                { ticker: '', shares: 0, buyPrice: 0.00, lastPrice: 0.00 },
+                { ticker: '', shares: 0, buyPrice: 0.00, lastPrice: 0.00 },
+                { ticker: '', shares: 0, buyPrice: 0.00, lastPrice: 0.00 }
             ],
             history: [
                 { date: new Date().toLocaleDateString(), balance: 170.00 }
-            ],
-            lastSundayBaseline: null,  
-            lastSundayTimestamp: null  
+            ]
         };
 
         // --- FIREBASE INITIALIZATION ENGINE ---
@@ -294,6 +319,12 @@
                     const cloudData = snapshot.val();
                     if (cloudData) {
                         appData = cloudData;
+                        // Backwards safety padding to handle array expansions
+                        if (!appData.stocks || appData.stocks.length < 6) {
+                            let oldList = appData.stocks || [];
+                            while(oldList.length < 6) oldList.push({ ticker: '', shares: 0, buyPrice: 0, lastPrice: 0 });
+                            appData.stocks = oldList;
+                        }
                         updateDashboard(false); 
                     }
                 });
@@ -307,16 +338,6 @@
             if (localSaved) {
                 appData = JSON.parse(localSaved);
             }
-        }
-
-        function getTargetSundayTime() {
-            let now = new Date();
-            let target = new Date(now);
-            let currentDay = now.getDay(); 
-            let daysToSubtract = currentDay === 0 ? (now.getHours() >= 21 ? 0 : 7) : currentDay;
-            target.setDate(now.getDate() - daysToSubtract);
-            target.setHours(21, 0, 0, 0);
-            return target.getTime();
         }
 
         async function fetchStockPrice(ticker, fallbackPrice) {
@@ -341,12 +362,14 @@
             tableBody.innerHTML = '';
             
             let accumulatedStockValue = 0;
+            let totalStockCostBasis = 0;
+
             let breakdownLabels = ['Fidelity Cash Core', 'Spending Cash'];
             let breakdownValues = [appData.investingCash, appData.spendingCash];
 
             for(let i = 0; i < appData.stocks.length; i++) {
                 let item = appData.stocks[i];
-                if(!item.ticker) continue;
+                if(!item || !item.ticker || item.ticker.trim() === "") continue;
                 
                 let price = await fetchStockPrice(item.ticker, item.lastPrice);
                 item.lastPrice = price; 
@@ -354,7 +377,9 @@
                 let totalValue = price * item.shares;
                 let totalCost = (item.buyPrice || 0) * item.shares;
                 let netGainLoss = totalValue - totalCost;
+                
                 accumulatedStockValue += totalValue;
+                totalStockCostBasis += totalCost;
 
                 breakdownLabels.push(item.ticker.toUpperCase());
                 breakdownValues.push(totalValue);
@@ -377,26 +402,21 @@
             currentGrandTotalInvesting = appData.investingCash + accumulatedStockValue;
             document.getElementById('total-investing-val').innerText = `$${currentGrandTotalInvesting.toFixed(2)}`;
             
-            let targetSundayTs = getTargetSundayTime();
-            if (!appData.lastSundayTimestamp || appData.lastSundayTimestamp !== targetSundayTs || appData.lastSundayBaseline === null) {
-                appData.lastSundayBaseline = accumulatedStockValue;
-                appData.lastSundayTimestamp = targetSundayTs;
-            }
+            // Calculate Stock Specific Performance (Isolated Gain / Loss Box)
+            let overallStockGainLoss = accumulatedStockValue - totalStockCostBasis;
+            let overallStockPct = totalStockCostBasis > 0 ? (overallStockGainLoss / totalStockCostBasis) * 100 : 0;
 
-            let weeklyGainLoss = accumulatedStockValue - appData.lastSundayBaseline;
-            let weeklyPct = appData.lastSundayBaseline > 0 ? (weeklyGainLoss / appData.lastSundayBaseline) * 100 : 0;
+            let displayGainVal = document.getElementById('total-gain-val');
+            let displayGainPct = document.getElementById('total-gain-pct');
 
-            let displayGainVal = document.getElementById('weekly-gain-val');
-            let displayGainPct = document.getElementById('weekly-gain-pct');
+            displayGainPct.innerText = `(${overallStockGainLoss >= 0 ? '+' : ''}${overallStockPct.toFixed(2)}%)`;
 
-            displayGainPct.innerText = `(${weeklyGainLoss >= 0 ? '+' : ''}${weeklyPct.toFixed(2)}%)`;
-
-            if (weeklyGainLoss > 0) {
-                displayGainVal.innerText = `+$${weeklyGainLoss.toFixed(2)}`;
+            if (overallStockGainLoss > 0) {
+                displayGainVal.innerText = `+$${overallStockGainLoss.toFixed(2)}`;
                 displayGainVal.className = "big-balance gain-positive";
                 displayGainPct.className = "gain-positive";
-            } else if (weeklyGainLoss < 0) {
-                displayGainVal.innerText = `-$${Math.abs(weeklyGainLoss).toFixed(2)}`;
+            } else if (overallStockGainLoss < 0) {
+                displayGainVal.innerText = `-$${Math.abs(overallStockGainLoss).toFixed(2)}`;
                 displayGainVal.className = "big-balance gain-negative";
                 displayGainPct.className = "gain-negative";
             } else {
@@ -427,12 +447,13 @@
                 
                 document.getElementById('input-spending-cash').value = appData.spendingCash;
                 document.getElementById('input-investing-cash').value = appData.investingCash;
-                document.getElementById('input-t1').value = appData.stocks[0]?.ticker || '';
-                document.getElementById('input-s1').value = appData.stocks[0]?.shares || 0;
-                document.getElementById('input-b1').value = appData.stocks[0]?.buyPrice || 0;
-                document.getElementById('input-t2').value = appData.stocks[1]?.ticker || '';
-                document.getElementById('input-s2').value = appData.stocks[1]?.shares || 0;
-                document.getElementById('input-b2').value = appData.stocks[1]?.buyPrice || 0;
+                
+                for(let i = 1; i <= 6; i++) {
+                    let s = appData.stocks[i-1] || { ticker: '', shares: 0, buyPrice: 0 };
+                    document.getElementById(`input-t${i}`).value = s.ticker || '';
+                    document.getElementById(`input-s${i}`).value = s.shares || '';
+                    document.getElementById(`input-b${i}`).value = s.buyPrice || '';
+                }
             } else {
                 alert("Incorrect PIN access denied.");
             }
@@ -443,20 +464,23 @@
             appData.investingCash = parseFloat(document.getElementById('input-investing-cash').value) || 0;
             
             let oldStocks = appData.stocks;
-            appData.stocks = [
-                { 
-                    ticker: document.getElementById('input-t1').value.toUpperCase(), 
-                    shares: parseFloat(document.getElementById('input-s1').value) || 0,
-                    buyPrice: parseFloat(document.getElementById('input-b1').value) || 0,
-                    lastPrice: oldStocks[0]?.ticker === document.getElementById('input-t1').value.toUpperCase() ? oldStocks[0]?.lastPrice : 50.00
-                },
-                { 
-                    ticker: document.getElementById('input-t2').value.toUpperCase(), 
-                    shares: parseFloat(document.getElementById('input-s2').value) || 0,
-                    buyPrice: parseFloat(document.getElementById('input-b2').value) || 0,
-                    lastPrice: oldStocks[1]?.ticker === document.getElementById('input-t2').value.toUpperCase() ? oldStocks[1]?.lastPrice : 50.00
-                }
-            ];
+            appData.stocks = [];
+
+            for(let i = 1; i <= 6; i++) {
+                let inputTicker = document.getElementById(`input-t${i}`).value.toUpperCase().trim();
+                let inputShares = parseFloat(document.getElementById(`input-s${i}`).value) || 0;
+                let inputBuyPrice = parseFloat(document.getElementById(`input-b${i}`).value) || 0;
+                
+                let matchingOldStock = oldStocks.find(old => old && old.ticker === inputTicker);
+                let runningFallbackPrice = matchingOldStock ? matchingOldStock.lastPrice : inputBuyPrice;
+
+                appData.stocks.push({
+                    ticker: inputTicker,
+                    shares: inputShares,
+                    buyPrice: inputBuyPrice,
+                    lastPrice: runningFallbackPrice
+                });
+            }
 
             await updateDashboard(false);
 
@@ -478,10 +502,12 @@
                 appData.investingCash = 72.00;
                 appData.stocks = [
                     { ticker: 'RBLX', shares: 2, buyPrice: 49.00, lastPrice: 49.00 },
-                    { ticker: 'MCD', shares: 0, buyPrice: 0.00, lastPrice: 0.00 }
+                    { ticker: '', shares: 0, buyPrice: 0.00, lastPrice: 0.00 },
+                    { ticker: '', shares: 0, buyPrice: 0.00, lastPrice: 0.00 },
+                    { ticker: '', shares: 0, buyPrice: 0.00, lastPrice: 0.00 },
+                    { ticker: '', shares: 0, buyPrice: 0.00, lastPrice: 0.00 },
+                    { ticker: '', shares: 0, buyPrice: 0.00, lastPrice: 0.00 }
                 ];
-                appData.lastSundayBaseline = null;
-                appData.lastSundayTimestamp = null;
                 
                 await updateDashboard(false); 
                 
@@ -536,7 +562,7 @@
                     labels: labels,
                     datasets: [{
                         data: values,
-                        backgroundColor: ['#0284c7', '#4ade80', '#c084fc', '#fb923c'],
+                        backgroundColor: ['#0284c7', '#4ade80', '#c084fc', '#fb923c', '#f43f5e', '#10b981', '#6366f1'],
                         borderColor: '#1e293b',
                         borderWidth: 2
                     }]

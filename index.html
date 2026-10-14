@@ -100,13 +100,14 @@
         }
         .form-group { margin-bottom: 12px; }
         label { display: block; font-size: 13px; color: #cbd5e1; margin-bottom: 5px; }
-        input {
+        input, select {
             width: 100%;
             padding: 8px;
             background-color: #1e293b;
             border: 1px solid #475569;
             border-radius: 6px;
             color: white;
+            font-size: 14px;
         }
 
         .allowance-text {
@@ -143,6 +144,33 @@
             border-radius: 8px;
             border: 1px solid #475569;
         }
+
+        /* Sell Stock Section */
+        .sell-section {
+            border-top: 1px solid #475569;
+            margin: 15px 0;
+            padding-top: 15px;
+        }
+        .sell-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 12px;
+            align-items: end;
+        }
+        @media (max-width: 640px) {
+            .sell-grid { grid-template-columns: 1fr; }
+        }
+        .btn-sell { background-color: #dc2626; }
+        .btn-sell:hover { background-color: #b91c1c; }
+        .sell-preview {
+            font-size: 13px;
+            color: #cbd5e1;
+            margin: 4px 0 12px 0;
+            min-height: 18px;
+        }
+        .sales-log table { margin-top: 5px; }
+        .sales-log th, .sales-log td { padding: 6px 8px; font-size: 13px; }
+        .sales-log th { font-size: 11px; }
     </style>
 </head>
 <body>
@@ -203,6 +231,7 @@
             <div class="big-balance gain-neutral" id="total-gain-val">$0.00</div>
             <div style="font-size: 14px; color: #94a3b8;" id="total-gain-pct">(0.00%)</div>
         </div>
+        <div id="gain-breakdown" style="font-size: 13px; color: #94a3b8; margin-top: -5px;"></div>
      </div>
 
     <div id="admin-panel" class="admin-panel">
@@ -270,6 +299,32 @@
         <button onclick="saveData()">Save Changes & Log History</button>
         <button style="background-color:#eab308; color:#0f172a;" onclick="resetGainLossBaseline()">Reset GAIN / LOSS to $0</button>
         <button style="background-color:#ef4444;" onclick="clearHistory()">Reset Chart History</button>
+
+        <!-- SELL STOCK -->
+        <div class="sell-section">
+            <p style="font-size: 13px; font-weight:bold; margin:0 0 10px 0; color:#f87171;">Sell Stock</p>
+            <div class="sell-grid">
+                <div class="form-group">
+                    <label>Position to sell</label>
+                    <select id="sell-stock-select" onchange="onSellSelectChange()"></select>
+                </div>
+                <div class="form-group">
+                    <label>Shares sold</label>
+                    <input type="number" id="sell-shares" step="0.01" min="0" oninput="updateSellPreview()">
+                </div>
+                <div class="form-group">
+                    <label>Sell price per share ($)</label>
+                    <input type="number" id="sell-price" step="0.01" min="0" oninput="updateSellPreview()">
+                </div>
+            </div>
+            <div class="sell-preview" id="sell-preview"></div>
+            <button class="btn-sell" onclick="recordSale()">Record Sale</button>
+
+            <div class="sales-log" style="margin-top: 20px;">
+                <p style="font-size: 13px; font-weight:bold; margin:0 0 5px 0;">Recent sales</p>
+                <div id="sales-log-body"></div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -296,6 +351,9 @@
             spendingCash: 50.00,
             investingCash: 72.00,
             trendVersion: 2, // Tracks current chart configuration reset state
+            realizedGain: 0,  // Cumulative profit/loss from stocks already sold
+            realizedCost: 0,  // Cost basis of the shares already sold (for the % calculation)
+            sales: [],        // Log of every sale
             stocks: [
                 { ticker: 'RBLX', shares: 2, buyPrice: 49.00, lastPrice: 49.00 },
                 { ticker: '', shares: 0, buyPrice: 0.00, lastPrice: 0.00 },
@@ -308,6 +366,22 @@
                 { date: new Date().toLocaleDateString(), balance: 170.00 }
             ]
         };
+
+        // Makes sure older saved data (without the sell fields) still works
+        function normalizeData() {
+            if (typeof appData.realizedGain !== 'number') appData.realizedGain = 0;
+            if (typeof appData.realizedCost !== 'number') appData.realizedCost = 0;
+            if (!Array.isArray(appData.sales)) {
+                appData.sales = appData.sales ? Object.values(appData.sales) : [];
+            }
+            if (!Array.isArray(appData.history)) {
+                appData.history = appData.history ? Object.values(appData.history) : [];
+            }
+        }
+
+        function fmtSigned(n) {
+            return (n >= 0 ? '+' : '-') + '$' + Math.abs(n).toFixed(2);
+        }
 
         // --- FIREBASE INITIALIZATION ENGINE ---
         if (firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith("REPLACE_")) {
@@ -329,6 +403,7 @@
                             while(oldList.length < 6) oldList.push({ ticker: '', shares: 0, buyPrice: 0, lastPrice: 0 });
                             appData.stocks = oldList;
                         }
+                        normalizeData();
                         updateDashboard(false); 
                     }
                 });
@@ -343,6 +418,7 @@
                 appData = JSON.parse(localSaved);
             }
         }
+        normalizeData();
 
         async function fetchStockPrice(ticker, fallbackPrice) {
             try {
@@ -414,20 +490,24 @@
                 if (shouldWriteToStorage) { commitStorage(); }
             }
 
-            // Calculate Stock Specific Performance (Isolated Gain / Loss Box)
-            let overallStockGainLoss = accumulatedStockValue - totalStockCostBasis;
-            let overallStockPct = totalStockCostBasis > 0 ? (overallStockGainLoss / totalStockCostBasis) * 100 : 0;
+            // Gain / Loss = open positions (unrealized) + stocks already sold (realized)
+            let unrealizedGainLoss = accumulatedStockValue - totalStockCostBasis;
+            let realizedGainLoss = appData.realizedGain || 0;
+            let overallStockGainLoss = unrealizedGainLoss + realizedGainLoss;
+            let pctBase = totalStockCostBasis + (appData.realizedCost || 0);
+            let overallStockPct = pctBase > 0 ? (overallStockGainLoss / pctBase) * 100 : 0;
 
             let displayGainVal = document.getElementById('total-gain-val');
             let displayGainPct = document.getElementById('total-gain-pct');
+            let displayBreakdown = document.getElementById('gain-breakdown');
 
             displayGainPct.innerText = `(${overallStockGainLoss >= 0 ? '+' : ''}${overallStockPct.toFixed(2)}%)`;
 
-            if (overallStockGainLoss > 0) {
+            if (overallStockGainLoss > 0.005) {
                 displayGainVal.innerText = `+$${overallStockGainLoss.toFixed(2)}`;
                 displayGainVal.className = "big-balance gain-positive";
                 displayGainPct.className = "gain-positive";
-            } else if (overallStockGainLoss < 0) {
+            } else if (overallStockGainLoss < -0.005) {
                 displayGainVal.innerText = `-$${Math.abs(overallStockGainLoss).toFixed(2)}`;
                 displayGainVal.className = "big-balance gain-negative";
                 displayGainPct.className = "gain-negative";
@@ -435,6 +515,13 @@
                 displayGainVal.innerText = `$0.00`;
                 displayGainVal.className = "big-balance gain-neutral";
                 displayGainPct.className = "gain-neutral";
+            }
+
+            // Only show the split once at least one sale has been recorded
+            if (appData.sales.length > 0 || Math.abs(realizedGainLoss) > 0.005) {
+                displayBreakdown.innerText = `Stocks still held: ${fmtSigned(unrealizedGainLoss)}  •  Stocks sold: ${fmtSigned(realizedGainLoss)}`;
+            } else {
+                displayBreakdown.innerText = '';
             }
 
             if (shouldWriteToStorage) { commitStorage(); }
@@ -451,25 +538,184 @@
             }
         }
 
+        // Fills the admin form fields from the current data
+        function refreshAdminInputs() {
+            document.getElementById('input-spending-cash').value = appData.spendingCash;
+            document.getElementById('input-investing-cash').value = appData.investingCash;
+            
+            for(let i = 1; i <= 6; i++) {
+                let s = appData.stocks[i-1] || { ticker: '', shares: 0, buyPrice: 0 };
+                document.getElementById(`input-t${i}`).value = s.ticker || '';
+                document.getElementById(`input-s${i}`).value = s.shares || '';
+                document.getElementById(`input-b${i}`).value = s.buyPrice || '';
+            }
+
+            populateSellDropdown();
+            renderSalesLog();
+        }
+
         function checkPin() {
             let userPin = prompt("Enter PIN to modify records:");
             if (userPin === PIN) {
                 let panel = document.getElementById('admin-panel');
                 panel.style.display = panel.style.display === "block" ? "none" : "block";
-                
-                document.getElementById('input-spending-cash').value = appData.spendingCash;
-                document.getElementById('input-investing-cash').value = appData.investingCash;
-                
-                for(let i = 1; i <= 6; i++) {
-                    let s = appData.stocks[i-1] || { ticker: '', shares: 0, buyPrice: 0 };
-                    document.getElementById(`input-t${i}`).value = s.ticker || '';
-                    document.getElementById(`input-s${i}`).value = s.shares || '';
-                    document.getElementById(`input-b${i}`).value = s.buyPrice || '';
-                }
+                refreshAdminInputs();
             } else {
                 alert("Incorrect PIN access denied.");
             }
         }
+
+        // ---------- SELL STOCK ----------
+        function populateSellDropdown() {
+            const sel = document.getElementById('sell-stock-select');
+            sel.innerHTML = '';
+            let count = 0;
+
+            appData.stocks.forEach((s, i) => {
+                if (s && s.ticker && s.ticker.trim() !== '' && s.shares > 0) {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.textContent = `${s.ticker.toUpperCase()} - ${s.shares} shares (bought at $${(s.buyPrice || 0).toFixed(2)})`;
+                    sel.appendChild(opt);
+                    count++;
+                }
+            });
+
+            if (count === 0) {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = 'No stocks to sell';
+                sel.appendChild(opt);
+            }
+            onSellSelectChange();
+        }
+
+        // Pre-fills shares (all of them) and price (last live price); both can be edited
+        function onSellSelectChange() {
+            const sel = document.getElementById('sell-stock-select');
+            const sharesInput = document.getElementById('sell-shares');
+            const priceInput = document.getElementById('sell-price');
+            const stock = sel.value !== '' ? appData.stocks[parseInt(sel.value)] : null;
+
+            if (stock) {
+                sharesInput.value = stock.shares;
+                priceInput.value = (stock.lastPrice || stock.buyPrice || 0).toFixed(2);
+            } else {
+                sharesInput.value = '';
+                priceInput.value = '';
+            }
+            updateSellPreview();
+        }
+
+        function updateSellPreview() {
+            const sel = document.getElementById('sell-stock-select');
+            const preview = document.getElementById('sell-preview');
+            const stock = sel.value !== '' ? appData.stocks[parseInt(sel.value)] : null;
+            const shares = parseFloat(document.getElementById('sell-shares').value);
+            const price = parseFloat(document.getElementById('sell-price').value);
+
+            if (!stock || isNaN(shares) || isNaN(price) || shares <= 0 || price < 0) {
+                preview.innerText = '';
+                return;
+            }
+            const proceeds = shares * price;
+            const profit = proceeds - shares * (stock.buyPrice || 0);
+            preview.innerText = `Cash received: $${proceeds.toFixed(2)}  •  Profit/loss on this sale: ${fmtSigned(profit)}`;
+        }
+
+        async function recordSale() {
+            const sel = document.getElementById('sell-stock-select');
+            if (sel.value === '') { alert("There is no stock to sell."); return; }
+
+            const idx = parseInt(sel.value);
+            const stock = appData.stocks[idx];
+            const sharesSold = parseFloat(document.getElementById('sell-shares').value);
+            const sellPrice = parseFloat(document.getElementById('sell-price').value);
+
+            if (!stock || !stock.ticker) { alert("Please choose a valid position."); return; }
+            if (isNaN(sharesSold) || sharesSold <= 0) { alert("Enter how many shares were sold."); return; }
+            if (isNaN(sellPrice) || sellPrice < 0) { alert("Enter the price per share the stock was sold at."); return; }
+            if (sharesSold > stock.shares + 0.000001) {
+                alert(`You only hold ${stock.shares} shares of ${stock.ticker}.`);
+                return;
+            }
+
+            const ticker = stock.ticker.toUpperCase();
+            const buyPrice = stock.buyPrice || 0;
+            const proceeds = sharesSold * sellPrice;
+            const costBasis = sharesSold * buyPrice;
+            const profit = proceeds - costBasis;
+
+            if (!confirm(`Record sale of ${sharesSold} ${ticker} at $${sellPrice.toFixed(2)}?\n\nCash received: $${proceeds.toFixed(2)}\nProfit/loss: ${fmtSigned(profit)}`)) {
+                return;
+            }
+
+            // 1) Money from the sale goes into the Fidelity cash core
+            appData.investingCash = (appData.investingCash || 0) + proceeds;
+
+            // 2) Lock in the realized profit/loss so the GAIN / LOSS counter keeps it
+            appData.realizedGain = (appData.realizedGain || 0) + profit;
+            appData.realizedCost = (appData.realizedCost || 0) + costBasis;
+
+            // 3) Keep a record of the sale
+            appData.sales.push({
+                date: new Date().toLocaleDateString(),
+                ticker: ticker,
+                shares: sharesSold,
+                buyPrice: buyPrice,
+                sellPrice: sellPrice
+            });
+
+            // 4) Remove the sold shares from the position (clear the slot if everything was sold)
+            const remaining = Math.round((stock.shares - sharesSold) * 1000000) / 1000000;
+            if (remaining <= 0.000001) {
+                appData.stocks[idx] = { ticker: '', shares: 0, buyPrice: 0, lastPrice: 0 };
+            } else {
+                stock.shares = remaining;
+            }
+
+            // 5) Recalculate totals, then log today's value on the trend chart
+            await updateDashboard(false);
+
+            let today = new Date().toLocaleDateString();
+            if (appData.history.length === 0 || appData.history[appData.history.length - 1]?.date !== today) {
+                appData.history.push({ date: today, balance: currentGrandTotalInvesting });
+            } else {
+                appData.history[appData.history.length - 1].balance = currentGrandTotalInvesting;
+            }
+
+            commitStorage();
+            refreshAdminInputs();
+            updateDashboard(false);
+
+            alert(`Sale recorded: ${sharesSold} ${ticker} at $${sellPrice.toFixed(2)}.`);
+        }
+
+        function renderSalesLog() {
+            const container = document.getElementById('sales-log-body');
+            if (!appData.sales || appData.sales.length === 0) {
+                container.innerHTML = '<span style="font-size:13px; color:#cbd5e1;">No sales recorded yet.</span>';
+                return;
+            }
+            const recent = appData.sales.slice(-5).reverse();
+            let rows = recent.map(s => {
+                const profit = (s.sellPrice - s.buyPrice) * s.shares;
+                const cls = profit > 0 ? 'gain-positive' : (profit < 0 ? 'gain-negative' : 'gain-neutral');
+                return `<tr>
+                    <td>${s.date}</td>
+                    <td class="stock-ticker">${s.ticker}</td>
+                    <td>${s.shares}</td>
+                    <td>$${s.buyPrice.toFixed(2)}</td>
+                    <td>$${s.sellPrice.toFixed(2)}</td>
+                    <td class="${cls}">${fmtSigned(profit)}</td>
+                </tr>`;
+            }).join('');
+            container.innerHTML = `<table>
+                <thead><tr><th>Date</th><th>Stock</th><th>Shares</th><th>Bought</th><th>Sold</th><th>Result</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>`;
+        }
+        // ---------- END SELL STOCK ----------
 
         async function saveData() {
             let oldStocks = JSON.parse(JSON.stringify(appData.stocks || []));
@@ -535,13 +781,15 @@
         }
 
         async function resetGainLossBaseline() {
-            if(confirm("Reset current stock gains/losses to $0? This will set your buy prices to the current live prices to track performance from this moment forward.")) {
+            if(confirm("Reset current stock gains/losses to $0? This will set your buy prices to the current live prices (and clear gains/losses from stocks already sold) to track performance from this moment forward.")) {
                 for(let i = 0; i < appData.stocks.length; i++) {
                     let item = appData.stocks[i];
                     if(item && item.ticker && item.ticker.trim() !== "" && item.shares > 0) {
                         item.buyPrice = item.lastPrice;
                     }
                 }
+                appData.realizedGain = 0;
+                appData.realizedCost = 0;
                 
                 await updateDashboard(true);
                 
@@ -550,6 +798,7 @@
                     let field = document.getElementById(`input-b${i}`);
                     if(field) field.value = s.buyPrice || '';
                 }
+                populateSellDropdown();
                 alert("Gain/Loss reset to $0 successfully!");
             }
         }
@@ -558,6 +807,9 @@
             if(confirm("Are you sure you want to wipe performance chart metrics history?")) {
                 appData.spendingCash = 50.00;
                 appData.investingCash = 72.00;
+                appData.realizedGain = 0;
+                appData.realizedCost = 0;
+                appData.sales = [];
                 appData.stocks = [
                     { ticker: 'RBLX', shares: 2, buyPrice: 49.00, lastPrice: 49.00 },
                     { ticker: '', shares: 0, buyPrice: 0.00, lastPrice: 0.00 },
@@ -574,6 +826,7 @@
                 appData.trendVersion = 3;
                 commitStorage();
                 updateDashboard(false);
+                refreshAdminInputs();
             }
         }
 
